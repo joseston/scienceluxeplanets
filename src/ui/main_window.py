@@ -25,24 +25,29 @@ class MainWindow:
         self.session_manager = session_manager
         self.planet_system = PlanetSystem()
         
-        # Configuración de ventana
-        self.window_width = 1200
-        self.window_height = 800
+        # Configuración de ventana VERTICAL para TikTok Live
+        self.window_width = 720   # Formato vertical optimizado para móvil
+        self.window_height = 1280 # Proporción 9:16 típica de TikTok
         self.fps = 60
         
         # Inicializar pygame
         pygame.init()
         self.screen = pygame.display.set_mode((self.window_width, self.window_height))
-        pygame.display.set_caption("TikTok Planets System")
+        pygame.display.set_caption("TikTok Planets System - Vertical Layout")
         self.clock = pygame.time.Clock()
         
-        # Componentes de UI
+        # Componentes de UI para layout VERTICAL
+        # Display de planetas ocupa la parte superior (70% de altura)
+        planet_display_height = int(self.window_height * 0.7)  # ~896px
+        control_panel_height = self.window_height - planet_display_height  # ~384px
+        
         self.planet_display = PlanetDisplay(self.planet_system, 
-                                          display_width=800, 
-                                          display_height=600)
+                                          display_width=self.window_width, 
+                                          display_height=planet_display_height,
+                                          layout_mode="vertical")  # NUEVO: modo vertical
         self.control_panel = ControlPanel(self.planet_system, 
-                                        panel_width=400, 
-                                        panel_height=800)
+                                        panel_width=self.window_width, 
+                                        panel_height=control_panel_height)
         
         # Estado de la aplicación
         self.running = True
@@ -119,29 +124,30 @@ class MainWindow:
     
     def _render(self):
         """
-        Renderiza todos los componentes en pantalla
+        Renderiza todos los componentes en pantalla en LAYOUT VERTICAL
         
-        Futuras mejoras:
-        - Capas de rendering para efectos
-        - Post-procesamiento de imagen
-        - Exportación de frames para video
+        Layout para TikTok Live:
+        - Zona superior: Display de planetas (70% altura)
+        - Zona inferior: Panel de control (30% altura)
         """
-        # Limpiar pantalla
-        self.screen.fill((20, 20, 30))  # Fondo espacial oscuro
+        # Limpiar pantalla con fondo espacial
+        self.screen.fill((10, 10, 20))  # Azul espacial muy oscuro
         
-        # Renderizar componentes
-        # Zona de planetas (lado izquierdo)
+        # Renderizar display de planetas en la parte SUPERIOR
         planet_surface = self.planet_display.render()
         self.screen.blit(planet_surface, (0, 0))
         
-        # Panel de control (lado derecho)
+        # Renderizar panel de control en la parte INFERIOR
         control_surface = self.control_panel.render()
-        self.screen.blit(control_surface, (800, 0))
+        control_y_position = self.planet_display.height
+        self.screen.blit(control_surface, (0, control_y_position))
         
-        # Línea divisoria
-        pygame.draw.line(self.screen, (100, 100, 100), (800, 0), (800, self.window_height), 2)
+        # Línea divisoria horizontal entre planetas y control
+        divider_y = self.planet_display.height
+        pygame.draw.line(self.screen, (100, 100, 100), 
+                        (0, divider_y), (self.window_width, divider_y), 2)
         
-        # Información de sesión (futuro)
+        # Información de sesión (opcional, en esquina superior)
         self._render_session_info()
         
         # Actualizar display
@@ -171,21 +177,27 @@ class MainWindow:
     
     def _render_session_info(self):
         """
-        Renderiza información de la sesión actual
-        
-        Futuras estadísticas:
-        - Tiempo de sesión activo
-        - Donadores únicos
-        - Valor total acumulado
-        - Planeta más valioso
+        Renderiza información básica de sesión en esquina superior
+        Simplificado para TikTok Live - solo info esencial
         """
-        # Placeholder para información de sesión
-        font = pygame.font.Font(None, 24)
+        font = pygame.font.Font(None, 20)  # Fuente más pequeña
         stats = self.session_manager.get_session_stats()
         
-        info_text = f"Planetas: {stats['total_planets']} | Total: {stats['total_donations']} coins"
+        # Info compacta en una línea
+        info_text = f"Planetas: {stats['total_planets']} | {stats['total_donations']} coins"
         text_surface = font.render(info_text, True, (255, 255, 255))
-        self.screen.blit(text_surface, (10, 10))
+        
+        # Fondo semi-transparente para legibilidad
+        text_rect = text_surface.get_rect()
+        text_rect.topleft = (10, 10)
+        background_rect = text_rect.inflate(10, 5)
+        
+        # Superficie con alpha para fondo
+        bg_surface = pygame.Surface(background_rect.size, pygame.SRCALPHA)
+        bg_surface.fill((0, 0, 0, 128))  # Negro semi-transparente
+        
+        self.screen.blit(bg_surface, background_rect.topleft)
+        self.screen.blit(text_surface, text_rect.topleft)
     
     def _toggle_fullscreen(self):
         """

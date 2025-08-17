@@ -20,27 +20,35 @@ class PlanetDisplay:
     - Fondos de nebulosas y estrellas animadas
     """
     
-    def __init__(self, planet_system: PlanetSystem, display_width: int, display_height: int):
+    def __init__(self, planet_system: PlanetSystem, display_width: int, display_height: int, layout_mode: str = "vertical"):
         self.planet_system = planet_system
         self.width = display_width
         self.height = display_height
+        self.layout_mode = layout_mode  # "vertical" para TikTok Live
         self.surface = pygame.Surface((self.width, self.height))
         
-        # Configuración visual
-        self.background_color = (10, 10, 20)  # Azul espacial muy oscuro
+        # Configuración visual para layout VERTICAL
+        self.background_color = (5, 5, 15)  # Azul espacial más oscuro
         self.max_visible_planets = 4
-        self.planet_spacing = self.width // (self.max_visible_planets + 1)
+        
+        # Configuración de espaciado VERTICAL
+        if layout_mode == "vertical":
+            self.planet_spacing_y = self.height // (self.max_visible_planets + 1)
+            self.planet_center_x = self.width // 2  # Centrados horizontalmente
+        else:
+            # Fallback al modo horizontal original
+            self.planet_spacing = self.width // (self.max_visible_planets + 1)
         
         # Configuración de animaciones
         self.animation_speed = 2.0
         self.rotation_speed = 0.5
         self.current_rotation = 0
         
-        # Efectos visuales futuros
+        # Efectos visuales optimizados para móvil
         self.show_orbits = False
         self.show_names = True
         self.show_values = True
-        self.particle_effects = False
+        self.particle_effects = False  # Deshabilitado por rendimiento en móvil
     
     def update(self, delta_time: int):
         """
@@ -87,22 +95,34 @@ class PlanetDisplay:
     
     def _render_planet(self, planet: Planet, position_index: int):
         """
-        Renderiza un planeta individual en su posición del carrusel
+        Renderiza un planeta individual en LAYOUT VERTICAL
         
-        Futuras mejoras:
-        - Texturas específicas por tipo de planeta
-        - Efectos de brillo y atmósfera
-        - Anillos para planetas grandes
-        - Lunas orbitando para sistemas complejos
+        Layout vertical: Los planetas se apilan de arriba hacia abajo
+        - Más reciente arriba
+        - Más antiguo abajo
+        - Centrados horizontalmente
         """
-        # Calcular posición en carrusel
-        x = (position_index + 1) * self.planet_spacing
-        y = self.height // 2
+        # Calcular posición VERTICAL
+        if self.layout_mode == "vertical":
+            x = self.planet_center_x  # Centrado horizontalmente
+            y = (position_index + 1) * self.planet_spacing_y
+            
+            # Ajustar Y para evitar que planetas grandes salgan de pantalla
+            max_y = self.height - 100  # Margen inferior
+            if y > max_y:
+                y = max_y
+        else:
+            # Fallback al modo horizontal
+            x = (position_index + 1) * self.planet_spacing
+            y = self.height // 2
         
         # Obtener propiedades visuales del planeta
         display_info = planet.get_display_info()
         size = display_info["size"]
         color = display_info["color"]
+        
+        # Ajustar tamaños para pantalla vertical (más compactos)
+        size = int(size * 0.8)  # Reducir 20% para mejor aprovechamiento del espacio
         
         # Renderizar planeta base
         pygame.draw.circle(self.surface, color, (x, y), size)
@@ -110,13 +130,13 @@ class PlanetDisplay:
         # Efectos visuales adicionales según tipo
         self._render_planet_effects(planet, x, y, size)
         
-        # Renderizar nombre del donador
+        # Renderizar nombre del donador (ajustado para vertical)
         if self.show_names:
-            self._render_planet_name(planet, x, y - size - 30)
+            self._render_planet_name(planet, x, y - size - 25)
         
         # Renderizar valor de donaciones
         if self.show_values:
-            self._render_planet_value(planet, x, y + size + 20)
+            self._render_planet_value(planet, x, y + size + 15)
     
     def _render_planet_effects(self, planet: Planet, x: int, y: int, size: int):
         """
@@ -158,51 +178,79 @@ class PlanetDisplay:
     
     def _render_planet_name(self, planet: Planet, x: int, y: int):
         """
-        Renderiza el nombre del donador sobre el planeta
+        Renderiza el nombre del donador - OPTIMIZADO para vertical
         
-        Futuras mejoras:
-        - Fuentes personalizables
-        - Colores basados en tipo de planeta
-        - Efectos de texto (sombras, brillos)
+        Mejoras para TikTok Live:
+        - Fuente más pequeña para pantallas móviles
+        - Fondo semi-transparente para legibilidad
+        - Centrado horizontal
         """
-        font = pygame.font.Font(None, 24)
+        font = pygame.font.Font(None, 22)  # Fuente más pequeña
         text_surface = font.render(planet.donor_name, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=(x, y))
+        
+        # Fondo semi-transparente para mejor legibilidad
+        bg_rect = text_rect.inflate(8, 4)
+        bg_surface = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
+        bg_surface.fill((0, 0, 0, 128))  # Negro semi-transparente
+        
+        self.surface.blit(bg_surface, bg_rect.topleft)
         self.surface.blit(text_surface, text_rect)
     
     def _render_planet_value(self, planet: Planet, x: int, y: int):
         """
-        Renderiza el valor total de donaciones bajo el planeta
+        Renderiza el valor total - OPTIMIZADO para vertical
         
-        Futuras mejoras:
-        - Formato de números con separadores
-        - Iconos de monedas
-        - Animaciones cuando el valor cambia
+        Mejoras para móvil:
+        - Formato más compacto
+        - Colores según valor (verde > amarillo > rojo)
         """
-        font = pygame.font.Font(None, 20)
-        value_text = f"{planet.total_value} coins"
-        text_surface = font.render(value_text, True, (200, 200, 200))
+        font = pygame.font.Font(None, 18)  # Fuente más pequeña
+        
+        # Color del texto según valor
+        if planet.total_value >= 1000:
+            color = (255, 215, 0)  # Dorado para valores altos
+        elif planet.total_value >= 100:
+            color = (144, 238, 144)  # Verde claro
+        else:
+            color = (200, 200, 200)  # Gris claro
+        
+        # Formato compacto del valor
+        if planet.total_value >= 1000:
+            value_text = f"{planet.total_value/1000:.1f}K"
+        else:
+            value_text = f"{planet.total_value}"
+        
+        text_surface = font.render(value_text, True, color)
         text_rect = text_surface.get_rect(center=(x, y))
+        
+        # Fondo semi-transparente
+        bg_rect = text_rect.inflate(6, 3)
+        bg_surface = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
+        bg_surface.fill((0, 0, 0, 100))
+        
+        self.surface.blit(bg_surface, bg_rect.topleft)
         self.surface.blit(text_surface, text_rect)
     
     def _render_background(self):
         """
-        Renderiza fondo estrellado animado
+        Renderiza fondo estrellado OPTIMIZADO para TikTok vertical
         
-        Futuras mejoras:
-        - Estrellas parpadeantes
-        - Nebulosas de colores
-        - Movimiento de paralaje
-        - Meteoritos ocasionales
+        Fondo más sutil para no distraer del contenido principal
         """
-        # Placeholder para estrellas estáticas
+        # Estrellas más sutiles para pantalla vertical
         import random
         random.seed(42)  # Seed fijo para estrellas consistentes
         
-        for _ in range(50):
+        # Menos estrellas para pantalla más pequeña
+        for _ in range(30):  # Reducido de 50 a 30
             star_x = random.randint(0, self.width)
             star_y = random.randint(0, self.height)
             star_size = random.randint(1, 2)
+            star_alpha = random.randint(50, 150)  # Más sutiles
+            
+            # Estrellas semi-transparentes
+            star_color = (255, 255, 255, star_alpha)
             pygame.draw.circle(self.surface, (255, 255, 255), (star_x, star_y), star_size)
     
     def _render_overlay_effects(self):

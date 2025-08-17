@@ -30,8 +30,7 @@ class ControlPanel:
     """
     
     def __init__(self, planet_system, panel_width: int, panel_height: int):
-
-          # Opciones de regalos
+        # Opciones de regalos
         self.gift_options = [
             ("Rosa", "rose", 1),
             ("Perfume", "perfume", 5),
@@ -46,7 +45,6 @@ class ControlPanel:
             ("Cohete", "rocket", 2000),
             ("Castillo", "castle", 5000)
         ]
-        
 
         self.planet_system = planet_system
         self.width = panel_width
@@ -57,23 +55,23 @@ class ControlPanel:
         self.new_donation_pending = False
         self.pending_donation_data: Optional[Dict] = None
         
-        # Fuentes
-        self.font_large = pygame.font.Font(None, 24)
-        self.font_medium = pygame.font.Font(None, 20)
-        self.font_small = pygame.font.Font(None, 16)
+        # Fuentes MÁS PEQUEÑAS para panel inferior compacto
+        self.font_large = pygame.font.Font(None, 20)   # Reducido
+        self.font_medium = pygame.font.Font(None, 18)  # Reducido
+        self.font_small = pygame.font.Font(None, 14)   # Reducido
         
-        # Colores
-        self.bg_color = (40, 40, 50)
-        self.button_color = (70, 70, 90)
-        self.button_hover_color = (90, 90, 110)
+        # Colores optimizados para contraste en móvil
+        self.bg_color = (25, 25, 35)  # Más oscuro
+        self.button_color = (60, 60, 80)
+        self.button_hover_color = (80, 80, 100)
         self.text_color = (255, 255, 255)
-        self.input_color = (60, 60, 80)
-        self.input_active_color = (80, 120, 160)  # Color cuando está activo
-        self.input_border_color = (120, 120, 140)
-        self.input_active_border_color = (160, 200, 255)  # Borde cuando está activo
+        self.input_color = (45, 45, 65)
+        self.input_active_color = (60, 100, 140)
+        self.input_border_color = (100, 100, 120)
+        self.input_active_border_color = (140, 180, 220)
         
-        # Configurar campos de entrada
-        self.setup_input_fields()
+        # Configurar campos de entrada para LAYOUT HORIZONTAL COMPACTO
+        self.setup_input_fields_horizontal()
         
         # Estado de entrada
         self.active_field = None
@@ -81,6 +79,43 @@ class ControlPanel:
         
       
         self.setup_layout()
+        
+    def setup_input_fields_horizontal(self):
+        """
+        Configura campos de entrada en LAYOUT HORIZONTAL para panel inferior
+        Optimizado para pantalla vertical de TikTok
+        """
+        # Calculamos anchos para 3 columnas principales + botón
+        field_width = (self.width - 60) // 4  # 4 elementos con espacios
+        button_width = field_width
+        margin = 10
+        y_pos = 30  # Una sola fila
+        
+        self.input_fields = {
+            "donor_name": InputField("donor_name", 
+                                   pygame.Rect(margin, y_pos, field_width, 35), "text"),
+            "gift_type": InputField("gift_type", 
+                                  pygame.Rect(margin + field_width + 10, y_pos, field_width, 35), "select"),
+            "custom_value": InputField("custom_value", 
+                                     pygame.Rect(margin + (field_width + 10) * 2, y_pos, field_width, 35), "number")
+        }
+        
+        # Configurar opciones para el selector de regalos
+        self.input_fields["gift_type"].options = [gift[0] for gift in self.gift_options]
+        self.input_fields["gift_type"].value = self.gift_options[0][0]
+        
+        # Botón de envío en la misma fila
+        self.submit_button_rect = pygame.Rect(margin + (field_width + 10) * 3, y_pos, button_width, 35)
+        
+        # Layout horizontal compacto
+        self.setup_layout_horizontal()
+        
+    def setup_layout_horizontal(self):
+        """Configura el layout HORIZONTAL COMPACTO para panel inferior"""
+        self.title_rect = pygame.Rect(10, 5, self.width - 20, 20)  # Título más pequeño
+        
+        # ELIMINAMOS el área de estadísticas como solicitas
+        # self.history_rect = None  # Comentado
     
     def setup_input_fields(self):
         """Configura todos los campos de entrada"""
@@ -111,24 +146,24 @@ class ControlPanel:
                 self.input_fields[self.active_field].cursor_visible = not self.input_fields[self.active_field].cursor_visible
     
     def render(self) -> pygame.Surface:
-        """Renderiza el panel de control completo"""
+        """Renderiza el panel de control completo - LAYOUT HORIZONTAL COMPACTO"""
         # Limpiar superficie
         self.surface.fill(self.bg_color)
         
-        # Título
+        # Título compacto
         self._render_title()
         
-        # Campos de entrada
+        # Campos de entrada en horizontal
         self._render_input_fields()
         
-        # Botones
+        # Botón de envío (ya está en la misma fila)
         self._render_buttons()
         
-        # Botones rápidos
-        self._render_quick_buttons()
+        # ELIMINADO: Botones rápidos (comentar si se necesitan después)
+        # self._render_quick_buttons()
         
-        # Historial/estadísticas
-        self._render_history_panel()
+        # ELIMINADO: Historial/estadísticas (como solicitaste)
+        # self._render_history_panel()
         
         return self.surface
     
@@ -341,10 +376,17 @@ class ControlPanel:
             field.value = field.options[field.selected_index]
     
     def _handle_mouse_click(self, event: pygame.event.Event):
-        """Maneja clicks del mouse en elementos del panel"""
+        """Maneja clicks del mouse en elementos del panel - LAYOUT HORIZONTAL INFERIOR"""
         mouse_pos = event.pos
-        # Ajustar posición relativa al panel (asumiendo que está en x=800)
-        relative_pos = (mouse_pos[0] - 800, mouse_pos[1])
+        
+        # Para layout vertical: el panel está en la parte inferior
+        # Necesitamos calcular la posición relativa al panel de control
+        planet_display_height = int(1280 * 0.7)  # 70% de la altura total
+        relative_pos = (mouse_pos[0], mouse_pos[1] - planet_display_height)
+        
+        # Verificar que el click está dentro del área del panel
+        if relative_pos[1] < 0 or relative_pos[1] > self.height:
+            return
         
         # Verificar click en campos de entrada
         clicked_field = None
@@ -359,8 +401,8 @@ class ControlPanel:
             if self._can_submit():
                 self._submit_donation()
         else:
-            # Click en botones rápidos
-            self._check_quick_button_click(relative_pos)
+            # COMENTADO: Click en botones rápidos (eliminados por ahora)
+            # self._check_quick_button_click(relative_pos)
             # Desactivar campos si click fuera
             self._deactivate_all_fields()
     
