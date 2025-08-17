@@ -47,18 +47,32 @@ class ControlPanel:
         ]
 
         self.planet_system = planet_system
-        self.width = panel_width
-        self.height = panel_height
-        self.surface = pygame.Surface((self.width, self.height))
+        # DIMENSIONES ORIGINALES para referencia de posicionamiento
+        self.screen_width = panel_width  
+        self.screen_height = panel_height
+        
+        # SUPERFICIE PEQUEÑA solo para el overlay - RESPONSIVE
+        self.overlay_width = 150   # Tamaño real del overlay
+        self.overlay_height = 100  # Tamaño real del overlay
+        
+        # Posición RESPONSIVE - calculada según tamaño de pantalla
+        # Posicionar en la esquina superior derecha con margen
+        margin_x = 20
+        margin_y = 60
+        self.overlay_x = self.screen_width - self.overlay_width - margin_x
+        self.overlay_y = margin_y
+        
+        # Superficie PEQUEÑA con transparencia
+        self.surface = pygame.Surface((self.overlay_width, self.overlay_height), pygame.SRCALPHA)
         
         # Estado del panel
         self.new_donation_pending = False
         self.pending_donation_data: Optional[Dict] = None
         
-        # Fuentes MÁS PEQUEÑAS para panel inferior compacto
-        self.font_large = pygame.font.Font(None, 20)   # Reducido
-        self.font_medium = pygame.font.Font(None, 18)  # Reducido
-        self.font_small = pygame.font.Font(None, 14)   # Reducido
+        # Fuentes MUY PEQUEÑAS para overlay compacto
+        self.font_large = pygame.font.Font(None, 16)   # Muy reducido
+        self.font_medium = pygame.font.Font(None, 14)  # Muy reducido
+        self.font_small = pygame.font.Font(None, 12)   # Muy reducido
         
         # Colores optimizados para contraste en móvil
         self.bg_color = (25, 25, 35)  # Más oscuro
@@ -70,15 +84,39 @@ class ControlPanel:
         self.input_border_color = (100, 100, 120)
         self.input_active_border_color = (140, 180, 220)
         
-        # Configurar campos de entrada para LAYOUT HORIZONTAL COMPACTO
-        self.setup_input_fields_horizontal()
+        # Configurar campos de entrada para LAYOUT OVERLAY EN ZONA LIBRE
+        self.setup_overlay_layout()
         
         # Estado de entrada
         self.active_field = None
         self.cursor_blink_timer = 0
         
-      
-        self.setup_layout()
+        # Configurar layout overlay (NO el layout viejo)
+        self.setup_overlay_layout()
+        
+    def setup_overlay_layout(self):
+        """
+        Configura layout overlay COMPACTO - coordenadas relativas al overlay
+        """
+        # Posiciones RELATIVAS al overlay pequeño (0,0 = esquina overlay)
+        start_x = 5    # Padding interno del overlay
+        start_y = 5    # Padding interno del overlay
+        control_width = self.overlay_width - 10   # Ancho menos padding
+        control_height = 18   # Altura de campos
+        spacing = 4           # Espacio entre campos
+        
+        # Solo 3 campos: nombre, valor y botón (eliminamos tipo de regalo)
+        self.input_fields = {
+            "donor_name": InputField("donor_name", 
+                                   pygame.Rect(start_x, start_y, control_width, control_height), "text"),
+            "custom_value": InputField("custom_value", 
+                                     pygame.Rect(start_x, start_y + control_height + spacing, 
+                                               control_width, control_height), "number")
+        }
+        
+        # Botón crear/actualizar - más pequeño
+        self.submit_button_rect = pygame.Rect(start_x, start_y + (control_height + spacing) * 2,
+                                            control_width, control_height + 4)
         
     def setup_input_fields_horizontal(self):
         """
@@ -129,12 +167,13 @@ class ControlPanel:
         self.input_fields["gift_type"].options = [gift[0] for gift in self.gift_options]
         self.input_fields["gift_type"].value = self.gift_options[0][0]
     
-    def setup_layout(self):
-        """Configura el layout del panel de control"""
-        self.title_rect = pygame.Rect(10, 10, self.width - 20, 30)
-        self.submit_button_rect = pygame.Rect(10, 210, self.width - 20, 40)
-        self.quick_buttons_rect = pygame.Rect(10, 260, self.width - 20, 30)
-        self.history_rect = pygame.Rect(10, 300, self.width - 20, self.height - 310)
+    # MÉTODO COMENTADO - NO SE USA EN OVERLAY
+    # def setup_layout(self):
+    #     """Configura el layout del panel de control"""
+    #     self.title_rect = pygame.Rect(10, 10, self.width - 20, 30)
+    #     self.submit_button_rect = pygame.Rect(10, 210, self.width - 20, 40)
+    #     self.quick_buttons_rect = pygame.Rect(10, 260, self.width - 20, 30)
+    #     self.history_rect = pygame.Rect(10, 300, self.width - 20, self.height - 310)
     
     def update(self, delta_time: int):
         """Actualiza el estado del panel de control"""
@@ -146,12 +185,84 @@ class ControlPanel:
                 self.input_fields[self.active_field].cursor_visible = not self.input_fields[self.active_field].cursor_visible
     
     def render(self) -> pygame.Surface:
-        """Renderiza el panel de control completo - LAYOUT HORIZONTAL COMPACTO"""
-        # Limpiar superficie
-        self.surface.fill(self.bg_color)
+        """Renderiza controles overlay en zona libre - SIN panel inferior"""
+        # Limpiar superficie como transparente/invisible
+        self.surface.fill((0, 0, 0, 0))  # Completamente transparente
         
-        # Título compacto
-        self._render_title()
+        # Renderizar controles overlay en zona libre
+        self._render_overlay_controls()
+        
+        return self.surface
+    
+    def _render_overlay_controls(self):
+        """Renderiza controles compactos en zona libre (overlay)"""
+        # Campo nombre del donador
+        field = self.input_fields["donor_name"]
+        self._render_overlay_field(field, "Nombre:")
+        
+        # Campo valor personalizado  
+        field = self.input_fields["custom_value"]
+        self._render_overlay_field(field, "Coins:")
+        
+        # Botón crear/actualizar
+        self._render_overlay_button()
+    
+    def _render_overlay_field(self, field: 'InputField', label: str):
+        """Renderiza un campo individual en el overlay - COMPACTO"""
+        # Fondo semi-transparente más pequeño
+        overlay_bg = pygame.Surface((field.rect.width, field.rect.height))
+        overlay_bg.set_alpha(180)
+        overlay_bg.fill((40, 40, 60))
+        self.surface.blit(overlay_bg, field.rect)
+        
+        # Borde más fino
+        border_color = (100, 150, 200) if field.is_active else (80, 80, 100)
+        pygame.draw.rect(self.surface, border_color, field.rect, 1)
+        
+        # Label MUY compacto arriba del campo
+        label_surface = self.font_small.render(label, True, (180, 180, 180))
+        label_y = field.rect.y - 14  # Más cerca del campo
+        self.surface.blit(label_surface, (field.rect.x, label_y))
+        
+        # Texto del campo más pequeño
+        text_surface = self.font_small.render(field.value, True, (255, 255, 255))
+        text_rect = text_surface.get_rect()
+        text_rect.left = field.rect.x + 3  # Menos padding
+        text_rect.centery = field.rect.centery
+        self.surface.blit(text_surface, text_rect)
+        
+        # Cursor parpadeante si está activo
+        if field.is_active and field.cursor_visible:
+            cursor_x = text_rect.right + 2
+            cursor_y1 = field.rect.y + 5
+            cursor_y2 = field.rect.bottom - 5
+            pygame.draw.line(self.surface, (255, 255, 255), (cursor_x, cursor_y1), (cursor_x, cursor_y2), 1)
+    
+    def _render_overlay_button(self):
+        """Renderiza el botón en el overlay - COMPACTO"""
+        # Verificar si se puede enviar
+        can_submit = self._can_submit_overlay()
+        button_color = (60, 120, 180) if can_submit else (60, 60, 80)
+        
+        # Fondo del botón más transparente
+        overlay_bg = pygame.Surface((self.submit_button_rect.width, self.submit_button_rect.height))
+        overlay_bg.set_alpha(200)
+        overlay_bg.fill(button_color)
+        self.surface.blit(overlay_bg, self.submit_button_rect)
+        
+        # Borde más fino
+        pygame.draw.rect(self.surface, (150, 150, 150), self.submit_button_rect, 1)
+        
+        # Texto del botón más pequeño
+        button_text = "Crear"  # Texto más corto
+        text_surface = self.font_small.render(button_text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=self.submit_button_rect.center)
+        self.surface.blit(text_surface, text_rect)
+    
+    def _can_submit_overlay(self) -> bool:
+        """Verifica si se puede enviar con los campos overlay"""
+        donor_name = self.input_fields["donor_name"].value.strip()
+        return len(donor_name) > 0
         
         # Campos de entrada en horizontal
         self._render_input_fields()
@@ -318,11 +429,113 @@ class ControlPanel:
                 self.surface.blit(planet_surface, (self.history_rect.x + 5, list_y + (i * 25)))
     
     def handle_event(self, event: pygame.event.Event):
-        """Maneja eventos del panel de control"""
+        """Maneja eventos del panel de control overlay"""
         if event.type == pygame.KEYDOWN:
-            self._handle_keyboard_input(event)
+            self._handle_keyboard_input_overlay(event)
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            self._handle_mouse_click(event)
+            self._handle_mouse_click_overlay(event)
+    
+    def _handle_mouse_click_overlay(self, event: pygame.event.Event):
+        """Maneja clicks del mouse en controles overlay - COORDENADAS AJUSTADAS"""
+        mouse_pos = event.pos
+        
+        # Ajustar coordenadas del mouse relativas al overlay
+        relative_mouse_x = mouse_pos[0] - self.overlay_x
+        relative_mouse_y = mouse_pos[1] - self.overlay_y
+        relative_pos = (relative_mouse_x, relative_mouse_y)
+        
+        # Verificar si el click está dentro del área del overlay
+        if (0 <= relative_mouse_x <= self.overlay_width and 
+            0 <= relative_mouse_y <= self.overlay_height):
+            
+            # Verificar click en campos de entrada
+            for field_name, field in self.input_fields.items():
+                if field.rect.collidepoint(relative_pos):
+                    self._activate_field(field_name)
+                    return
+            
+            # Verificar click en botón
+            if self.submit_button_rect.collidepoint(relative_pos):
+                if self._can_submit_overlay():
+                    self._submit_donation_overlay()
+                return
+        
+        # Click fuera del overlay - desactivar campos
+        self._deactivate_all_fields()
+    
+    def _handle_keyboard_input_overlay(self, event: pygame.event.Event):
+        """Maneja entrada de teclado para campos overlay"""
+        if not self.active_field:
+            return
+        
+        active_field_obj = self.input_fields[self.active_field]
+        
+        if event.key == pygame.K_RETURN:
+            if self._can_submit_overlay():
+                self._submit_donation_overlay()
+            return
+        elif event.key == pygame.K_TAB:
+            self._cycle_active_field_overlay()
+            return
+        elif event.key == pygame.K_ESCAPE:
+            self._deactivate_all_fields()
+            return
+        
+        # Manejar entrada según tipo de campo
+        if active_field_obj.field_type == "text":
+            self._handle_text_input(event, active_field_obj)
+        elif active_field_obj.field_type == "number":
+            self._handle_number_input(event, active_field_obj)
+    
+    def _cycle_active_field_overlay(self):
+        """Cicla entre campos en el overlay"""
+        field_names = ["donor_name", "custom_value"]
+        if self.active_field is None:
+            self._activate_field(field_names[0])
+        else:
+            current_index = field_names.index(self.active_field)
+            next_index = (current_index + 1) % len(field_names)
+            self._activate_field(field_names[next_index])
+    
+    def _submit_donation_overlay(self):
+        """Envía donación usando datos del overlay"""
+        donor_name = self.input_fields["donor_name"].value.strip()
+        custom_value_str = self.input_fields["custom_value"].value.strip()
+        
+        # Usar valor personalizado o valor por defecto (1 coin = rosa)
+        custom_value = None
+        if custom_value_str and custom_value_str.isdigit():
+            custom_value = int(custom_value_str)
+        
+        self.pending_donation_data = {
+            "donor_name": donor_name,
+            "gift_type": "custom",  # Tipo genérico
+            "custom_value": custom_value if custom_value else 1  # Default 1 coin
+        }
+        self.new_donation_pending = True
+        
+        # Limpiar campos después del envío
+        self.input_fields["donor_name"].value = ""
+        self.input_fields["custom_value"].value = ""
+        self._deactivate_all_fields()
+    
+    def _activate_field(self, field_name: str):
+        """Activa un campo específico"""
+        # Desactivar todos los campos
+        for field in self.input_fields.values():
+            field.is_active = False
+            field.cursor_visible = True
+        
+        # Activar el campo especificado
+        if field_name in self.input_fields:
+            self.input_fields[field_name].is_active = True
+            self.active_field = field_name
+    
+    def _deactivate_all_fields(self):
+        """Desactiva todos los campos"""
+        for field in self.input_fields.values():
+            field.is_active = False
+        self.active_field = None
     
     def _handle_keyboard_input(self, event: pygame.event.Event):
         """Maneja entrada de teclado para campos de texto"""

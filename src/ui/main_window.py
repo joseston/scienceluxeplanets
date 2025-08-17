@@ -25,29 +25,35 @@ class MainWindow:
         self.session_manager = session_manager
         self.planet_system = PlanetSystem()
         
-        # Configuración de ventana VERTICAL para TikTok Live
-        self.window_width = 720   # Formato vertical optimizado para móvil
-        self.window_height = 1280 # Proporción 9:16 típica de TikTok
+        # Obtener tamaño de pantalla dinámicamente
+        pygame.init()
+        screen_info = pygame.display.Info()
+        screen_width = screen_info.current_w
+        screen_height = screen_info.current_h
+        
+        # Configuración de ventana RESPONSIVE para TikTok Live
+        # Usar un porcentaje de la pantalla para asegurar que quepa
+        max_width = min(720, int(screen_width * 0.4))   # Máximo 720px o 40% del ancho
+        max_height = min(1000, int(screen_height * 0.85)) # Máximo 1000px o 85% del alto
+        
+        # Mantener proporción vertical pero adaptable
+        self.window_width = max_width
+        self.window_height = max_height
         self.fps = 60
         
-        # Inicializar pygame
-        pygame.init()
+        # Crear ventana con tamaño calculado dinámicamente
         self.screen = pygame.display.set_mode((self.window_width, self.window_height))
-        pygame.display.set_caption("TikTok Planets System - Vertical Layout")
+        pygame.display.set_caption("TikTok Planets System - Responsive Layout")
         self.clock = pygame.time.Clock()
         
-        # Componentes de UI para layout VERTICAL
-        # Display de planetas ocupa la parte superior (70% de altura)
-        planet_display_height = int(self.window_height * 0.7)  # ~896px
-        control_panel_height = self.window_height - planet_display_height  # ~384px
-        
+        # Componentes de UI para layout VERTICAL con OVERLAY
         self.planet_display = PlanetDisplay(self.planet_system, 
                                           display_width=self.window_width, 
-                                          display_height=planet_display_height,
-                                          layout_mode="vertical")  # NUEVO: modo vertical
+                                          display_height=self.window_height,  # Pantalla completa
+                                          layout_mode="vertical")
         self.control_panel = ControlPanel(self.planet_system, 
-                                        panel_width=self.window_width, 
-                                        panel_height=control_panel_height)
+                                        panel_width=self.window_width,  # Pantalla completa para overlay
+                                        panel_height=self.window_height)
         
         # Estado de la aplicación
         self.running = True
@@ -124,30 +130,28 @@ class MainWindow:
     
     def _render(self):
         """
-        Renderiza todos los componentes en pantalla en LAYOUT VERTICAL
+        Renderiza todos los componentes en pantalla VERTICAL con OVERLAY
         
         Layout para TikTok Live:
-        - Zona superior: Display de planetas (70% altura)
-        - Zona inferior: Panel de control (30% altura)
+        - Fondo completo: Display de planetas (pantalla completa)
+        - Overlay: Controles flotantes en zona libre (sin panel inferior)
         """
         # Limpiar pantalla con fondo espacial
         self.screen.fill((10, 10, 20))  # Azul espacial muy oscuro
         
-        # Renderizar display de planetas en la parte SUPERIOR
+        # Renderizar display de planetas en PANTALLA COMPLETA
         planet_surface = self.planet_display.render()
         self.screen.blit(planet_surface, (0, 0))
         
-        # Renderizar panel de control en la parte INFERIOR
+        # Renderizar controles OVERLAY pequeño en posición específica
         control_surface = self.control_panel.render()
-        control_y_position = self.planet_display.height
-        self.screen.blit(control_surface, (0, control_y_position))
+        # Posicionar el overlay pequeño en la zona libre (círculo naranja)
+        overlay_pos = (self.control_panel.overlay_x, self.control_panel.overlay_y)
+        self.screen.blit(control_surface, overlay_pos)
         
-        # Línea divisoria horizontal entre planetas y control
-        divider_y = self.planet_display.height
-        pygame.draw.line(self.screen, (100, 100, 100), 
-                        (0, divider_y), (self.window_width, divider_y), 2)
+        # NO hay línea divisoria - todo es overlay
         
-        # Información de sesión (opcional, en esquina superior)
+        # Información de sesión (opcional, en esquina superior izquierda)
         self._render_session_info()
         
         # Actualizar display
