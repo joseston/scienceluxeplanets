@@ -1,0 +1,13 @@
+# Requirements for TikTok Planets System
+# Dependencias necesarias para el sistema de planetas
+
+pygame==2.5.2              # Para renderizado de planetas y UI
+sqlite3                    # Base de datos local (incluido en Python)
+Pillow==10.0.1            # Procesamiento de imágenes para texturas
+numpy==1.24.3             # Cálculos matemáticos para posiciones y animaciones
+
+# Futuras dependencias posibles:
+# requests==2.31.0         # Para futura integración con APIs de TikTok
+# PyQt6==6.5.2            # Alternativa a pygame para UI más compleja
+# pydub==0.25.1           # Para efectos de sonido personalizados
+# matplotlib==3.7.2       # Para visualizaciones científicas avanzadas

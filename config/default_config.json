@@ -1,0 +1,51 @@
+{
+  "display": {
+    "width": 1200,
+    "height": 800,
+    "fps": 60,
+    "fullscreen": false,
+    "planet_display_width": 800,
+    "planet_display_height": 600,
+    "max_visible_planets": 4
+  },
+  "visual": {
+    "theme": "space",
+    "show_planet_names": true,
+    "show_planet_values": true,
+    "show_background_stars": true,
+    "enable_planet_effects": true,
+    "animation_speed": 1.0,
+    "particle_effects": false
+  },
+  "donations": {
+    "default_gift_values": {
+      "rose": 1,
+      "perfume": 5,
+      "finger_heart": 5,
+      "glow_stick": 10,
+      "ice_cream": 15,
+      "heart_me": 25,
+      "birthday_cake": 50,
+      "motorcycle": 100,
+      "sports_car": 500,
+      "yacht": 1000,
+      "rocket": 2000,
+      "castle": 5000
+    },
+    "auto_save": true,
+    "session_backup": true
+  },
+  "ui": {
+    "font_size_large": 24,
+    "font_size_medium": 20,
+    "font_size_small": 16,
+    "panel_width": 400,
+    "enable_quick_buttons": true,
+    "show_session_stats": true
+  },
+  "database": {
+    "auto_backup": true,
+    "backup_interval_minutes": 30,
+    "max_backup_files": 10
+  }
+}
